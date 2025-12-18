@@ -23,7 +23,7 @@ async function enviar() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
   try {
-    const r = await fetch("https://TU_DOMINIO_BACKEND/chat", { // Cambia TU_DOMINIO_BACKEND
+    const r = await fetch("https://cns-chatbot-backend.onrender.com/chat", { // Cambia TU_DOMINIO_BACKEND
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: mensaje })
