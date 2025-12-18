@@ -1,42 +1,57 @@
-import express from "express";
-import fetch from "node-fetch";
-import cors from "cors";
-import dotenv from "dotenv";
+// ===== BOT CHAT REAL CON HUGGING FACE (MEJORADO) =====
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
 
-dotenv.config();
+async function enviar() {
+  const mensaje = chatInput.value.trim();
+  if (!mensaje) return;
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+  // Mostrar mensaje del usuario
+  const userDiv = document.createElement("div");
+  userDiv.classList.add("user-msg");
+  userDiv.textContent = mensaje;
+  chatMessages.appendChild(userDiv);
 
-// Endpoint para recibir mensajes del frontend
-app.post("/chat", async (req, res) => {
-  const mensaje = req.body.message;
+  chatInput.value = "";
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Mostrar mensaje de "Escribiendo..."
+  const botDiv = document.createElement("div");
+  botDiv.classList.add("bot-msg");
+  botDiv.textContent = "Escribiendo...";
+  chatMessages.appendChild(botDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://TU_DOMINIO_BACKEND/chat", { // Cambia TU_DOMINIO_BACKEND
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [
-          { role: "system", content: "Eres un asistente para explicar resultados del CNS." },
-          { role: "user", content: mensaje }
-        ]
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: mensaje })
     });
 
     const data = await r.json();
-    res.json({ reply: data.choices[0].message.content });
 
+    // Simular typing (animación de escritura)
+    let reply = data.reply;
+    botDiv.textContent = "";
+    let i = 0;
+    const typing = setInterval(() => {
+      if (i < reply.length) {
+        botDiv.textContent += reply[i];
+        i++;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } else {
+        clearInterval(typing);
+      }
+    }, 20); // velocidad de escritura (ms por carácter)
   } catch (error) {
     console.error(error);
-    res.status(500).json({ reply: "Error del servidor" });
+    botDiv.textContent = "Error de conexión con el servidor.";
   }
-});
+}
 
-// Puerto 3000
-app.listen(3000, () => console.log("Servidor listo en puerto 3000"));
+// Mostrar/ocultar ventana del chatbot
+function toggleChat() {
+  const chat = document.getElementById("chatbot");
+  chat.style.display = chat.style.display === "block" ? "none" : "block";
+}
