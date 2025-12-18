@@ -1,57 +1,62 @@
-// ===== BOT CHAT REAL CON HUGGING FACE (MEJORADO) =====
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
+import express from "express";
+import fetch from "node-fetch";
+import cors from "cors";
+import dotenv from "dotenv";
 
-async function enviar() {
-  const mensaje = chatInput.value.trim();
-  if (!mensaje) return;
+dotenv.config();
 
-  // Mostrar mensaje del usuario
-  const userDiv = document.createElement("div");
-  userDiv.classList.add("user-msg");
-  userDiv.textContent = mensaje;
-  chatMessages.appendChild(userDiv);
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
 
-  chatInput.value = "";
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+const HF_TOKEN = process.env.HF_API_KEY;
 
-  // Mostrar mensaje de "Escribiendo..."
-  const botDiv = document.createElement("div");
-  botDiv.classList.add("bot-msg");
-  botDiv.textContent = "Escribiendo...";
-  chatMessages.appendChild(botDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+// memoria simple (demo)
+let history = [];
+
+app.post("/chat", async (req, res) => {
+  const userMessage = req.body.message;
+
+  history.push(`User: ${userMessage}`);
+  if (history.length > 6) history.shift();
+
+  const prompt = history.join("\n") + "\nBot:";
 
   try {
-    const r = await fetch("https://cns-chatbot-backend.onrender.com/chat", { // Cambia TU_DOMINIO_BACKEND
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: mensaje })
-    });
-
-    const data = await r.json();
-
-    // Simular typing (animación de escritura)
-    let reply = data.reply;
-    botDiv.textContent = "";
-    let i = 0;
-    const typing = setInterval(() => {
-      if (i < reply.length) {
-        botDiv.textContent += reply[i];
-        i++;
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      } else {
-        clearInterval(typing);
+    const response = await fetch(
+      "https://router.huggingface.co/hf-inference/models/microsoft/DialoGPT-medium",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 80,
+            temperature: 0.7,
+            top_p: 0.9
+          }
+        })
       }
-    }, 20); // velocidad de escritura (ms por carácter)
+    );
+
+    const data = await response.json();
+    let reply = data[0]?.generated_text || "No entendí, intenta de nuevo.";
+
+    reply = reply.replace(prompt, "").trim();
+    history.push(`Bot: ${reply}`);
+
+    res.json({ reply });
   } catch (error) {
     console.error(error);
-    botDiv.textContent = "Error de conexión con el servidor.";
+    res.status(500).json({ reply: "Error del servidor" });
   }
-}
+});
 
-// Mostrar/ocultar ventana del chatbot
-function toggleChat() {
-  const chat = document.getElementById("chatbot");
-  chat.style.display = chat.style.display === "block" ? "none" : "block";
-}
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () =>
+  console.log(`🤖 Backend CNS activo en puerto ${PORT}`)
+);
