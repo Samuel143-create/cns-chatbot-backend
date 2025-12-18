@@ -12,16 +12,19 @@ app.use(express.static("public"));
 
 const HF_TOKEN = process.env.HF_API_KEY;
 
-// memoria simple (demo)
-let history = [];
+let history = []; // memoria de la conversación
 
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
+  // guardar mensaje del usuario
   history.push(`User: ${userMessage}`);
-  if (history.length > 6) history.shift();
+  if (history.length > 6) history.shift(); // solo mantener últimas 6 interacciones
 
-  const prompt = history.join("\n") + "\nBot:";
+  // contexto CNS
+  const contexto = `Eres el asistente oficial del CNS (Consejo Nacional Samuel). Responde preguntas sobre CNS y elecciones en Honduras. Mantén las respuestas claras y cortas.\n`;
+
+  const prompt = contexto + history.join("\n") + "\nBot:";
 
   try {
     const response = await fetch(
@@ -44,12 +47,17 @@ app.post("/chat", async (req, res) => {
     );
 
     const data = await response.json();
+
     let reply = data[0]?.generated_text || "No entendí, intenta de nuevo.";
 
+    // limpiar el prompt del reply
     reply = reply.replace(prompt, "").trim();
+
+    // guardar respuesta del bot
     history.push(`Bot: ${reply}`);
 
     res.json({ reply });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ reply: "Error del servidor" });
