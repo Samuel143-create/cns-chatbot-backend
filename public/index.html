@@ -2,23 +2,51 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>CNS – Chatbot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
+  <title>Prueba Chatbot CNS</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #chat { max-width: 500px; margin: auto; }
+    #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px; }
+    input { width: 80%; padding: 10px; }
+    button { padding: 10px; }
+  </style>
 </head>
 <body>
-
-<h1>Asistente CNS 🤖</h1>
-
-<div id="chat-container">
-  <div id="chat-messages"></div>
-
-  <div class="input-box">
-    <input id="chat-input" placeholder="Escribe tu mensaje..." />
+  <h1>Prueba Chatbot CNS</h1>
+  <div id="chat">
+    <div id="messages"></div>
+    <input id="input" placeholder="Escribe tu mensaje..." />
     <button onclick="enviar()">Enviar</button>
   </div>
-</div>
 
-<script src="script.js"></script>
+  <script>
+    async function enviar() {
+      const input = document.getElementById("input");
+      const messages = document.getElementById("messages");
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      messages.innerHTML += `<div><b>Tú:</b> ${texto}</div>`;
+      input.value = "";
+      messages.innerHTML += `<div id="pensando">🤖 Pensando...</div>`;
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: texto })
+        });
+
+        const data = await res.json();
+        document.getElementById("pensando").remove();
+        messages.innerHTML += `<div><b>Asistente:</b> ${data.reply}</div>`;
+        messages.scrollTop = messages.scrollHeight;
+
+      } catch (e) {
+        document.getElementById("pensando").innerText =
+          "❌ Error al conectar con el servidor";
+      }
+    }
+  </script>
 </body>
 </html>

@@ -12,16 +12,15 @@ app.use(express.static("public"));
 
 const HF_TOKEN = process.env.HF_API_KEY;
 
-let history = []; // memoria de la conversación
+let history = [];
 
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
+  if (!userMessage) return res.status(400).json({ reply: "Mensaje vacío" });
 
-  // guardar mensaje del usuario
   history.push(`User: ${userMessage}`);
-  if (history.length > 6) history.shift(); // solo mantener últimas 6 interacciones
+  if (history.length > 6) history.shift();
 
-  // contexto CNS
   const contexto = `Eres el asistente oficial del CNS (Consejo Nacional Samuel). Responde preguntas sobre CNS y elecciones en Honduras. Mantén las respuestas claras y cortas.\n`;
 
   const prompt = contexto + history.join("\n") + "\nBot:";
@@ -33,31 +32,28 @@ app.post("/chat", async (req, res) => {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           inputs: prompt,
-          parameters: {
-            max_new_tokens: 80,
-            temperature: 0.7,
-            top_p: 0.9
-          }
-        })
+          parameters: { max_new_tokens: 80, temperature: 0.7, top_p: 0.9 }
+        }),
       }
     );
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      console.error("Error parsing Hugging Face response:", await response.text());
+      return res.status(500).json({ reply: "Error del servidor" });
+    }
 
     let reply = data[0]?.generated_text || "No entendí, intenta de nuevo.";
-
-    // limpiar el prompt del reply
     reply = reply.replace(prompt, "").trim();
-
-    // guardar respuesta del bot
     history.push(`Bot: ${reply}`);
 
     res.json({ reply });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ reply: "Error del servidor" });

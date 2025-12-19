@@ -1,34 +1,32 @@
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
+function toggleChat() {
+  const chat = document.getElementById("chatbot");
+  chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+}
 
 async function enviar() {
-  const mensaje = chatInput.value.trim();
-  if (!mensaje) return;
+  const input = document.getElementById("chat-input");
+  const mensajes = document.getElementById("chat-messages");
+  const texto = input.value.trim();
+  if (!texto) return;
 
-  const userDiv = document.createElement("div");
-  userDiv.className = "user-msg";
-  userDiv.textContent = mensaje;
-  chatMessages.appendChild(userDiv);
-
-  chatInput.value = "";
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-
-  const botDiv = document.createElement("div");
-  botDiv.className = "bot-msg";
-  botDiv.textContent = "Escribiendo...";
-  chatMessages.appendChild(botDiv);
+  mensajes.innerHTML += `<div><b>Tú:</b> ${texto}</div>`;
+  input.value = "";
+  mensajes.innerHTML += `<div id="pensando">🤖 Pensando...</div>`;
 
   try {
-    const r = await fetch("/chat", {
+    const res = await fetch("https://cns-chatbot-backend.onrender.com/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: mensaje })
+      body: JSON.stringify({ message: texto })
     });
 
-    const data = await r.json();
-    botDiv.textContent = data.reply;
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  } catch (error) {
-    botDiv.textContent = "Error de conexión.";
+    const data = await res.json();
+    document.getElementById("pensando").remove();
+    mensajes.innerHTML += `<div><b>Asistente:</b> ${data.reply}</div>`;
+    mensajes.scrollTop = mensajes.scrollHeight;
+
+  } catch (e) {
+    document.getElementById("pensando").innerText =
+      "❌ Error al conectar con el servidor";
   }
 }
